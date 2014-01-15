@@ -3,6 +3,7 @@ from bukkit_plugin import *
 from error import Error
 import datetime
 import wx
+import webbrowser
 
 plugins = []
 
@@ -96,6 +97,7 @@ class MainDialog(wx.Dialog):
         self.Bind(wx.EVT_BUTTON, self.onDownload, id=2)
         
         self.plugins.Bind(wx.EVT_LIST_ITEM_SELECTED, self.onPluginSelected, self.plugins)
+        self.versions.Bind(wx.EVT_LIST_ITEM_SELECTED, self.onVersionSelected, self.versions)
         self.versions.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.onVersionDoubleClick, self.versions)
         
     def onClose(self, event):
@@ -108,6 +110,7 @@ class MainDialog(wx.Dialog):
         return self.changeText("You want to download something, huh?")
         
     def onPluginSelected(self, event):
+        self.changeText("Loading...")
         self.versions.DeleteAllItems()
         hash = event.GetText()
         for plugin in plugins:
@@ -120,17 +123,23 @@ class MainDialog(wx.Dialog):
                         self.versions.SetItem(index, 3, row["Status"])
                         self.versions.SetItem(index, 4, datetime.datetime.fromtimestamp(row["Date"]).strftime('%Y-%m-%d'))
                         try:
-                            self.versions.SetItem(index, 5, "{0}-{1}".format(row["Game version"][0], row["Game version"][-1])) #Sorry, too lazy
+                            if len(row["Game version"]) >= 2:
+                                self.versions.SetItem(index, 5, "{0} - {1}".format(row["Game version"][-1], row["Game version"][0]))
+                            else:
+                                self.versions.SetItem(index, 5, "{0}".format(row["Game version"][0]))
                         except:
-                            self.versions.SetItem(index, 5, "{0}".format(row["Game version"][0]))
+                            self.versions.SetItem(index, 5, "None")
                         self.versions.SetItem(index, 6, row["Filename"])
                         self.versions.SetItem(index, 7, str(row["Downloads"]))
                 except Exception as e:
                     return self.changeText(str(e))
-        return self.changeText("Plugin selected!\n{0}".format(event.GetText()))
+        return self.changeText("Plugin info downloaded from BukkitDev!")
         
     def onVersionDoubleClick(self, event):
-        return self.changeText("I want to open this url:\n{0}".format(event.GetText()))
+        return webbrowser.open(event.GetText())
+        
+    def onVersionSelected(self, event):
+        return self.changeText("Double click to open plugin update log,\nor click download button to \ndownload the plugin and save to disk.")
         
     def changeText(self, text):
         self.text.SetLabel(text)

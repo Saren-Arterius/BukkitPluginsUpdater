@@ -16,6 +16,10 @@ class bukkitPlugin(ZipFile):
             self.origin = dirname(path)
             self.name = sub("\r|\n", "", findall("name: (.*)", yaml)[0])
             self.version = sub("\r|\n", "", findall("version: (.*)", yaml)[0])
+            try:
+                self.author = sub("\r|\n", "", findall("author: (.*)", yaml)[0])
+            except:
+                self.author = ""
             self.hash = sha256(bytes("{0}{1}{2}{3}".format(self.origin, self.name, self.version, yaml), "utf-8")).hexdigest()
         
     def __str__(self):
@@ -23,7 +27,7 @@ class bukkitPlugin(ZipFile):
 
     def __getGoogleResult(self):
         try:
-            url = "http://www.google.com.hk/search?q={0}+files+site%3Adev.bukkit.org%2Fbukkit-plugins".format(sub(" ", "+", self.name))
+            url = "http://www.google.com.hk/search?q=\"{0}\"+\"{1}\"+files+site%3Adev.bukkit.org%2Fbukkit-plugins".format(sub(" ", "+", self.name), sub(" ", "+", self.author))
             opener = urllib.request.build_opener()
             opener.addheaders = [('User-agent', 'Mozilla/5.0')]
             resp = opener.open(url)
@@ -32,19 +36,25 @@ class bukkitPlugin(ZipFile):
             raise Error("Failed to use google!")
         
     def __getFilesPage(self):
-        self.googleResult = self.__getGoogleResult()
-        url = "http://" + sub("<[^>]*>", "", pq(self.googleResult)(".kv").find("cite").html())
-        if findall("files", url):
-            opener = urllib.request.build_opener()
-            opener.addheaders = [('User-agent', 'Mozilla/5.0')]
-            resp = opener.open(url)
-            return resp.read().decode()
-        else:
-            raise Error("Failed to get bukkit files page, or plugin is not available on bukkitdev.")
+        try:
+            self.googleResult
+        except:
+            self.googleResult = self.__getGoogleResult()
+        finally:
+            for elem in pq(self.googleResult)(".kv").find("cite"):
+                bukkitDevName = findall("dev.bukkit.org/bukkit-plugins/(.+)/.+", sub("<[^>]*>", "", pq(elem).html()))
+                if bukkitDevName:
+                    url = "http://dev.bukkit.org/bukkit-plugins/{0}/files/".format(bukkitDevName[0])
+                    print(bukkitDevName)
+                    opener = urllib.request.build_opener()
+                    opener.addheaders = [('User-agent', 'Mozilla/5.0')]
+                    resp = opener.open(url)
+                    return resp.read().decode()
+            raise Error("Failed to get bukkit files page, \nor plugin is not available on bukkitdev.")
         
     def getAllVersions(self):
         try:
-            self.versions
+            return self.versions
         except:
             self.filesPage = self.__getFilesPage()
             table = []
@@ -69,14 +79,9 @@ class bukkitPlugin(ZipFile):
                     elif pq(cell).attr("class") == "col-downloads":
                         table[index]["Downloads"] = int(pq(cell)("span").attr("data-value"))
             self.versions = table
-        finally:
             return self.versions
         
     def getVersionUrl(self, index):
-        try:
-            self.versions
-        except:
-            self.versions = self.getAllVersions()
         try:
             downloadPageUrl = self.versions[index]["Name"]["href"]
             opener = urllib.request.build_opener()
