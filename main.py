@@ -1,6 +1,10 @@
 #!/usr/bin/python
 from bukkit_plugin import *
+from time import sleep
+from error import Error
 import wx
+
+plugins = []
 
 class FileDropTarget(wx.FileDropTarget):
     def __init__(self, obj):
@@ -8,15 +12,27 @@ class FileDropTarget(wx.FileDropTarget):
         self.obj = obj
 
     def OnDropFiles(self, x, y, filenames):
-        try:
-            plugin = bukkitPlugin(filenames[0])
+        print(filenames)
+        for filename in filenames:
+            try:
+                newPlugin = bukkitPlugin(filename)
+                print(newPlugin)
+                for plugin in plugins:
+                    if newPlugin.hash == plugin.hash:
+                        raise Error("{0} already exists in plugin list.".format(newPlugin.name))
+                plugins.append(newPlugin)
+            except Exception as e:
+                self.obj.changeText(str(e))
+        return self.updatePluginList()
+        
+    def updatePluginList(self):
+        self.obj.plugins.DeleteAllItems()
+        for plugin in plugins:
             num_items = self.obj.plugins.GetItemCount()
             self.obj.plugins.InsertItem(num_items, plugin.name)
             self.obj.plugins.SetItem(num_items, 1, plugin.version)
-            return True
-        except Exception as e:
-            self.obj.changeText(str(e))
-            return False
+            self.obj.plugins.SetItem(num_items, 2, plugin.hash)
+        return True
 
 class MainDialog(wx.Dialog):
     def __init__(self, parent, id, title):
@@ -30,8 +46,10 @@ class MainDialog(wx.Dialog):
         
         self.plugins.InsertColumn(0, 'Plugin')
         self.plugins.InsertColumn(1, 'Version')
+        self.plugins.InsertColumn(2, 'Hash') #Hidden column
         self.plugins.SetColumnWidth(0, 200)
         self.plugins.SetColumnWidth(1, 90)
+        self.plugins.SetColumnWidth(2, 0)
 
         self.versions.InsertColumn(0, 'Name')
         self.versions.InsertColumn(1, 'Release type')

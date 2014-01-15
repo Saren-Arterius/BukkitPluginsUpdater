@@ -4,15 +4,22 @@ from zipfile import ZipFile, is_zipfile
 from re import findall, sub
 from pyquery import PyQuery as pq
 from error import Error
+from hashlib import sha256
+from os.path import dirname
 import urllib.request
 
 class bukkitPlugin(ZipFile):
     def __init__(self, path):
-        self.zip = ZipFile(path)
-        with self.zip.open("plugin.yml") as pluginInfo:
-            self.yaml = pluginInfo.read().decode()
-        self.version = sub("\r|\n", "", findall("version: (.*)", self.yaml)[0])
-        self.name = sub("\r|\n", "", findall("name: (.*)", self.yaml)[0])
+        zip = ZipFile(path)
+        with zip.open("plugin.yml") as pluginInfo:
+            yaml = pluginInfo.read().decode()
+            self.origin = dirname(path)
+            self.name = sub("\r|\n", "", findall("name: (.*)", yaml)[0])
+            self.version = sub("\r|\n", "", findall("version: (.*)", yaml)[0])
+            self.hash = sha256(bytes("{0}{1}{2}{3}".format(self.origin, self.name, self.version, yaml), "utf-8")).hexdigest()
+        
+    def __str__(self):
+        return "Craftbukkit plugin: {0} {1}\nFile origin: {2}\nHash: {3}\n".format(self.name, self.version, self.origin, self.hash)
 
     def getGoogleResult(self):
         try:
