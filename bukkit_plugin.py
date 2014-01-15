@@ -1,10 +1,10 @@
+#!/usr/bin/python3.3
 from sys import argv
 from zipfile import ZipFile, is_zipfile
 from re import findall, sub
 from pyquery import PyQuery as pq
 from error import Error
 import urllib.request
-
 
 class bukkitPlugin(ZipFile):
     def __init__(self, path):
@@ -33,7 +33,7 @@ class bukkitPlugin(ZipFile):
             resp = opener.open(url)
             return resp.read().decode()
         else:
-            raise Error("Failed to get bukkit files page, or it does not exist.")
+            raise Error("Failed to get bukkit files page, or plugin is not available on bukkitdev.")
         
     def getAllVersions(self):
         self.filesPage = self.getFilesPage()
@@ -65,18 +65,18 @@ class bukkitPlugin(ZipFile):
             self.versions
         except:
             self.versions = self.getAllVersions()
-        else:
-            try:
-                downloadPageUrl = self.versions[index]["Name"]["href"]
-                opener = urllib.request.build_opener()
-                opener.addheaders = [('User-agent', 'Mozilla/5.0')]
-                resp = opener.open(downloadPageUrl)
-                downloadPage = resp.read().decode()
-                return pq(downloadPage)(".user-action-download").find("a").attr("href")
-            except KeyError:
-                raise Error("Bukkit page is broken?")
-            except:
-                raise Error("Failed to get plugin download link!")
+        try:
+            downloadPageUrl = self.versions[index]["Name"]["href"]
+            opener = urllib.request.build_opener()
+            opener.addheaders = [('User-agent', 'Mozilla/5.0')]
+            resp = opener.open(downloadPageUrl)
+            downloadPage = resp.read().decode()
+            return pq(downloadPage)(".user-action-download").find("a").attr("href")
+        except KeyError:
+            raise Error("Bukkit page is broken?")
+        except:
+            raise Error("Failed to get plugin download link!")
 
-plugin = bukkitPlugin(argv[1])
-print(plugin.getVersionUrl(0))
+if __name__ == "__main__": #Test
+    plugin = bukkitPlugin(argv[1])
+    print(plugin.getVersionUrl(0))

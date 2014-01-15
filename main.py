@@ -1,3 +1,4 @@
+#!/usr/bin/python3.3
 import tkinter as tk
 
 class Application(tk.Frame):

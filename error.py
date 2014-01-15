@@ -1,3 +1,4 @@
+#!/usr/bin/python3.3
 class Error(Exception):
     def __init__(self, message):
         self.message = message
