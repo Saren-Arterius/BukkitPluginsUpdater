@@ -1,7 +1,7 @@
 #!/usr/bin/python
 from bukkit_plugin import *
-from time import sleep
 from error import Error
+import datetime
 import wx
 
 plugins = []
@@ -29,9 +29,9 @@ class FileDropTarget(wx.FileDropTarget):
         self.obj.plugins.DeleteAllItems()
         for plugin in plugins:
             num_items = self.obj.plugins.GetItemCount()
-            self.obj.plugins.InsertItem(num_items, plugin.name)
-            self.obj.plugins.SetItem(num_items, 1, plugin.version)
-            self.obj.plugins.SetItem(num_items, 2, plugin.hash)
+            self.obj.plugins.InsertItem(num_items, plugin.hash)
+            self.obj.plugins.SetItem(num_items, 1, plugin.name)
+            self.obj.plugins.SetItem(num_items, 2, plugin.version)
         return True
 
 class MainDialog(wx.Dialog):
@@ -44,22 +44,25 @@ class MainDialog(wx.Dialog):
 
         self.plugins, self.versions = wx.ListCtrl(self, -1, style=wx.LC_REPORT), wx.ListCtrl(self, -1, style=wx.LC_REPORT)
         
-        self.plugins.InsertColumn(0, 'Plugin')
-        self.plugins.InsertColumn(1, 'Version')
-        self.plugins.InsertColumn(2, 'Hash') #Hidden column
-        self.plugins.SetColumnWidth(0, 200)
-        self.plugins.SetColumnWidth(1, 90)
-        self.plugins.SetColumnWidth(2, 0)
+        self.plugins.InsertColumn(0, 'Hash') #Hidden column
+        self.plugins.InsertColumn(1, 'Plugin')
+        self.plugins.InsertColumn(2, 'Version')
+        
+        self.plugins.SetColumnWidth(0, 0)
+        self.plugins.SetColumnWidth(1, 200)
+        self.plugins.SetColumnWidth(2, 90)
 
-        self.versions.InsertColumn(0, 'Name')
-        self.versions.InsertColumn(1, 'Release type')
-        self.versions.InsertColumn(2, 'Status')
-        self.versions.InsertColumn(3, 'Date')
-        self.versions.InsertColumn(4, 'Game version')
-        self.versions.InsertColumn(5, 'Filename')
-        self.versions.InsertColumn(6, 'Downloads')
-        self.versions.SetColumnWidth(1, 90)
-        self.versions.SetColumnWidth(4, 90)
+        self.versions.InsertColumn(0, 'href') #Hidden column
+        self.versions.InsertColumn(1, 'Name')
+        self.versions.InsertColumn(2, 'Release type')
+        self.versions.InsertColumn(3, 'Status')
+        self.versions.InsertColumn(4, 'Date')
+        self.versions.InsertColumn(5, 'Game version')
+        self.versions.InsertColumn(6, 'Filename')
+        self.versions.InsertColumn(7, 'Downloads')
+        self.versions.SetColumnWidth(0, 0)
+        self.versions.SetColumnWidth(2, 90)
+        self.versions.SetColumnWidth(5, 90)
         
         self.controlPanel = wx.Panel(self, -1)
         
@@ -92,6 +95,9 @@ class MainDialog(wx.Dialog):
         self.Bind(wx.EVT_BUTTON, self.onLazy, id=1)
         self.Bind(wx.EVT_BUTTON, self.onDownload, id=2)
         
+        self.plugins.Bind(wx.EVT_LIST_ITEM_SELECTED, self.onPluginSelected, self.plugins)
+        self.versions.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.onVersionDoubleClick, self.versions)
+        
     def onClose(self, event):
         self.Close()
         
@@ -100,6 +106,31 @@ class MainDialog(wx.Dialog):
         
     def onDownload(self, event):
         return self.changeText("You want to download something, huh?")
+        
+    def onPluginSelected(self, event):
+        self.versions.DeleteAllItems()
+        hash = event.GetText()
+        for plugin in plugins:
+            if hash == plugin.hash:
+                try:
+                    for index, row in enumerate(plugin.getAllVersions()):
+                        self.versions.InsertItem(index, row["Name"]["href"])
+                        self.versions.SetItem(index, 1, row["Name"]["Name"])
+                        self.versions.SetItem(index, 2, row["Release type"])
+                        self.versions.SetItem(index, 3, row["Status"])
+                        self.versions.SetItem(index, 4, datetime.datetime.fromtimestamp(row["Date"]).strftime('%Y-%m-%d'))
+                        try:
+                            self.versions.SetItem(index, 5, "{0}-{1}".format(row["Game version"][0], row["Game version"][-1])) #Sorry, too lazy
+                        except:
+                            self.versions.SetItem(index, 5, "{0}".format(row["Game version"][0]))
+                        self.versions.SetItem(index, 6, row["Filename"])
+                        self.versions.SetItem(index, 7, str(row["Downloads"]))
+                except Exception as e:
+                    return self.changeText(str(e))
+        return self.changeText("Plugin selected!\n{0}".format(event.GetText()))
+        
+    def onVersionDoubleClick(self, event):
+        return self.changeText("I want to open this url:\n{0}".format(event.GetText()))
         
     def changeText(self, text):
         self.text.SetLabel(text)
