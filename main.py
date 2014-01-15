@@ -1,15 +1,30 @@
 #!/usr/bin/python
-
-# capitals.py
-
+from bukkit_plugin import *
 import wx
 
-class MyDialog(wx.Dialog):
+class FileDropTarget(wx.FileDropTarget):
+    def __init__(self, obj):
+        wx.FileDropTarget.__init__(self)
+        self.obj = obj
+
+    def OnDropFiles(self, x, y, filenames):
+        try:
+            plugin = bukkitPlugin(filenames[0])
+            num_items = self.obj.plugins.GetItemCount()
+            self.obj.plugins.InsertItem(num_items, plugin.name)
+            self.obj.plugins.SetItem(num_items, 1, plugin.version)
+            return True
+        except Exception as e:
+            self.obj.changeText(str(e))
+            return False
+
+class MainDialog(wx.Dialog):
     def __init__(self, parent, id, title):
         wx.Dialog.__init__(self, parent, id, title, size=(1200,500), style=wx.DEFAULT_DIALOG_STYLE)
 
-        hbox = wx.BoxSizer(wx.HORIZONTAL)
-        buttonBox, controlBox, pluginsBox, versionsBox = wx.BoxSizer(wx.VERTICAL), wx.BoxSizer(wx.VERTICAL), wx.BoxSizer(wx.VERTICAL), wx.BoxSizer(wx.VERTICAL)
+        self.hbox = wx.BoxSizer(wx.HORIZONTAL)
+        self.textBox, self.buttonBox, self.controlBox = wx.BoxSizer(wx.VERTICAL), wx.BoxSizer(wx.VERTICAL), wx.BoxSizer(wx.VERTICAL)
+        self.pluginsBox, self.versionsBox = wx.BoxSizer(wx.VERTICAL), wx.BoxSizer(wx.VERTICAL)
 
         self.plugins, self.versions = wx.ListCtrl(self, -1, style=wx.LC_REPORT), wx.ListCtrl(self, -1, style=wx.LC_REPORT)
         
@@ -28,28 +43,53 @@ class MyDialog(wx.Dialog):
         self.versions.SetColumnWidth(1, 90)
         self.versions.SetColumnWidth(4, 90)
         
-        controlPanel = wx.Panel(self, -1, style=wx.SIMPLE_BORDER)
-        buttonPanel = wx.Panel(controlPanel, -1, style=wx.SIMPLE_BORDER)
+        self.controlPanel = wx.Panel(self, -1)
         
-        buttonBox.Add(wx.Button(buttonPanel, 13, 'Lazy'), 0, wx.ALIGN_CENTER | wx.TOP, 50)
-        buttonBox.Add(wx.Button(buttonPanel, 14, 'Close'), 0, wx.ALIGN_CENTER | wx.TOP, 20)
-        buttonPanel.SetSizer(buttonBox)
+        self.textPanel = wx.Panel(self.controlPanel, -1)
+        self.text = wx.StaticText(self.textPanel, -1, 'Drag and drop the plugins folder or *.jar here.')
+        self.textBox.Add(self.text, 0, wx.EXPAND, 5)
+        self.textPanel.SetSizer(self.textBox)
         
-        controlBox.Add(buttonPanel, 1, wx.ALIGN_CENTER | wx.TOP, 100)
-        controlPanel.SetSizer(controlBox)
-        
-        pluginsBox.Add(self.plugins, 1, wx.EXPAND | wx.ALL, 3)
-        versionsBox.Add(self.versions, 1, wx.EXPAND | wx.ALL, 3)
+        self.buttonPanel = wx.Panel(self.controlPanel, -1)
+        self.buttonBox.Add(wx.Button(self.buttonPanel, 2, 'Download'), 0, wx.ALIGN_CENTER | wx.TOP)
+        self.buttonBox.Add(wx.Button(self.buttonPanel, 1, 'Lazy'), 0, wx.ALIGN_CENTER | wx.TOP, 20)
+        self.buttonBox.Add(wx.Button(self.buttonPanel, 0, 'Close'), 0, wx.ALIGN_CENTER | wx.TOP, 20)
+        self.buttonPanel.SetSizer(self.buttonBox)
 
-        hbox.Add(pluginsBox, 1, wx.EXPAND)
-        hbox.Add(controlPanel, 1, wx.EXPAND)
-        hbox.Add(versionsBox, 1, wx.EXPAND)
+        self.controlBox.Add(self.textPanel, 1, wx.ALIGN_CENTER | wx.TOP, 150)
+        self.controlBox.Add(self.buttonPanel, 1, wx.ALIGN_CENTER | wx.TOP, 80)
+        self.controlPanel.SetSizer(self.controlBox)
+        self.controlPanel.SetDropTarget(FileDropTarget(self))
         
-        self.SetSizer(hbox)
+        self.pluginsBox.Add(self.plugins, 1, wx.EXPAND | wx.ALL, 3)
+        self.versionsBox.Add(self.versions, 1, wx.EXPAND | wx.ALL, 3)
+
+        self.hbox.Add(self.pluginsBox, 0, wx.EXPAND)
+        self.hbox.Add(self.controlPanel, 1, wx.EXPAND)
+        self.hbox.Add(self.versionsBox, 2, wx.EXPAND)
+        
+        self.SetSizer(self.hbox)
+        
+        self.Bind(wx.EVT_BUTTON, self.onClose, id=0)
+        self.Bind(wx.EVT_BUTTON, self.onLazy, id=1)
+        self.Bind(wx.EVT_BUTTON, self.onDownload, id=2)
+        
+    def onClose(self, event):
+        self.Close()
+        
+    def onLazy(self, event):
+        return self.changeText("You are lazy, huh?")
+        
+    def onDownload(self, event):
+        return self.changeText("You want to download something, huh?")
+        
+    def changeText(self, text):
+        self.text.SetLabel(text)
+        return True
 
 class Main(wx.App):
     def OnInit(self):
-        dia = MyDialog(None, -1, 'Bukkit plugin updater')
+        dia = MainDialog(None, -1, 'Bukkit plugin updater')
         dia.ShowModal()
         dia.Destroy()
         return True
