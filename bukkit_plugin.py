@@ -2,7 +2,9 @@ from sys import argv
 from zipfile import ZipFile, is_zipfile
 from re import findall, sub
 from pyquery import PyQuery as pq
+from error import Error
 import urllib.request
+
 
 class bukkitPlugin(ZipFile):
     def __init__(self, path):
@@ -13,19 +15,25 @@ class bukkitPlugin(ZipFile):
         self.name = sub("\r|\n", "", findall("name: (.*)", self.yaml)[0])
 
     def getGoogleResult(self):
-        url = "http://www.google.com.hk/search?q={0}+files+site%3Adev.bukkit.org%2Fbukkit-plugins".format(sub(" ", "+", self.name))
-        opener = urllib.request.build_opener()
-        opener.addheaders = [('User-agent', 'Mozilla/5.0')]
-        resp = opener.open(url)
-        return resp.read().decode()
+        try:
+            url = "http://www.google.com.hk/search?q={0}+files+site%3Adev.bukkit.org%2Fbukkit-plugins".format(sub(" ", "+", self.name))
+            opener = urllib.request.build_opener()
+            opener.addheaders = [('User-agent', 'Mozilla/5.0')]
+            resp = opener.open(url)
+            return resp.read().decode()
+        except:
+            raise Error("Failed to use google!")
         
     def getFilesPage(self):
         self.googleResult = self.getGoogleResult()
         url = "http://" + sub("<[^>]*>", "", pq(self.googleResult)(".kv").find("cite").html())
-        opener = urllib.request.build_opener()
-        opener.addheaders = [('User-agent', 'Mozilla/5.0')]
-        resp = opener.open(url)
-        return resp.read().decode()
+        if findall("files", url):
+            opener = urllib.request.build_opener()
+            opener.addheaders = [('User-agent', 'Mozilla/5.0')]
+            resp = opener.open(url)
+            return resp.read().decode()
+        else:
+            raise Error("Failed to get bukkit files page, or it does not exist.")
         
     def getAllVersions(self):
         self.filesPage = self.getFilesPage()
@@ -56,14 +64,19 @@ class bukkitPlugin(ZipFile):
         try:
             self.versions
         except:
-            self.versions = plugin.getAllVersions()
-        finally:
-            downloadPageUrl = self.versions[index]["Name"]["href"]
-            opener = urllib.request.build_opener()
-            opener.addheaders = [('User-agent', 'Mozilla/5.0')]
-            resp = opener.open(downloadPageUrl)
-            downloadPage = resp.read().decode()
-            return pq(downloadPage)(".user-action-download").find("a").attr("href")
+            self.versions = self.getAllVersions()
+        else:
+            try:
+                downloadPageUrl = self.versions[index]["Name"]["href"]
+                opener = urllib.request.build_opener()
+                opener.addheaders = [('User-agent', 'Mozilla/5.0')]
+                resp = opener.open(downloadPageUrl)
+                downloadPage = resp.read().decode()
+                return pq(downloadPage)(".user-action-download").find("a").attr("href")
+            except KeyError:
+                raise Error("Bukkit page is broken?")
+            except:
+                raise Error("Failed to get plugin download link!")
 
 plugin = bukkitPlugin(argv[1])
 print(plugin.getVersionUrl(0))
