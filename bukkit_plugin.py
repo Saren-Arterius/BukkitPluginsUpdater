@@ -57,12 +57,13 @@ class bukkitPlugin(ZipFile):
             self.versions
         except:
             self.versions = plugin.getAllVersions()
-        downloadPageUrl = self.versions[index]["Name"]["href"]
-        opener = urllib.request.build_opener()
-        opener.addheaders = [('User-agent', 'Mozilla/5.0')]
-        resp = opener.open(downloadPageUrl)
-        downloadPage = resp.read().decode()
-        return pq(downloadPage)(".user-action-download").find("a").attr("href")
+        finally:
+            downloadPageUrl = self.versions[index]["Name"]["href"]
+            opener = urllib.request.build_opener()
+            opener.addheaders = [('User-agent', 'Mozilla/5.0')]
+            resp = opener.open(downloadPageUrl)
+            downloadPage = resp.read().decode()
+            return pq(downloadPage)(".user-action-download").find("a").attr("href")
 
 plugin = bukkitPlugin(argv[1])
 print(plugin.getVersionUrl(0))
