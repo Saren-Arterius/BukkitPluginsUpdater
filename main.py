@@ -105,7 +105,7 @@ class MainDialog(wx.Dialog):
         self.textPanel.Bind(wx.EVT_LEFT_DCLICK, self.onTextPanelDoubleClick, self.textPanel)
         self.text.Bind(wx.EVT_LEFT_DCLICK, self.onTextPanelDoubleClick, self.text)
         
-        self.plugins.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.onPluginSelected, self.plugins)
+        self.plugins.Bind(wx.EVT_LIST_ITEM_SELECTED, self.onPluginSelected, self.plugins)
         self.versions.Bind(wx.EVT_LIST_ITEM_SELECTED, self.onVersionSelected, self.versions)
         self.versions.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.onVersionDoubleClick, self.versions)
         self.Bind(wx.EVT_CHAR_HOOK, self.onDeleteKey)
@@ -206,7 +206,7 @@ class MainDialog(wx.Dialog):
         
     def onLazy(self, event):
         itemsCount = self.plugins.GetItemCount()
-        if itemsCount >= 0:
+        if itemsCount > 0:
             answer = wx.MessageBox("Are you feeling lazy today?", "Let me ask you a question:", wx.YES_NO)
             if answer == wx.YES:
                 process = wx.ProgressDialog("The whole world is getting even more lazier...", "Initializing...", maximum=itemsCount*1000, parent=None, 
@@ -322,13 +322,8 @@ class MainDialog(wx.Dialog):
     def onDeleteKey(self, event):
         key = event.GetKeyCode()
         if key == 127 or key == 385: # Delete key
-            itemsCount = self.plugins.GetItemCount()
-            for i in range(itemsCount):
-                if self.plugins.IsSelected(i):
-                    for plugin in plugins:
-                        if plugin.hash == self.plugins.GetItemText(i):
-                            plugins.remove(plugin)
-                            break
+            plugins.clear()
+            self.changeText("Plugins list cleared!")
             return self.updatePluginList()
         else:
             return False
