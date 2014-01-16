@@ -4,6 +4,7 @@ from error import Error
 from Levenshtein import ratio
 from time import time
 from textwrap import fill
+from sys import argv
 import os
 import datetime
 import wx
@@ -345,7 +346,7 @@ class Main(wx.App):
         return True
 
 if __name__ == "__main__":
-    db = os.path.dirname(os.path.realpath(__file__)) + "\\" + "database.db"
+    db = os.path.abspath(os.path.dirname(argv[0])) + "\\" + "database.db"
     if not os.path.exists(db): #Analytic
         url = "https://minecraft.wtako.coms.hk/analytic/{0}/".format("0.0.1") #Version
         req = urllib.request.urlopen(url, timeout=1)
