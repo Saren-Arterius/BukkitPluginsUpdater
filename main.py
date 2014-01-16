@@ -121,6 +121,7 @@ class MainDialog(wx.Dialog):
         return True
 
     def addPluginFiles(self, filenames):
+        pluginsAdded = 0
         for filename in filenames:
             if os.path.isdir(filename):
                 for fileInDir in os.listdir(filename):
@@ -132,6 +133,7 @@ class MainDialog(wx.Dialog):
                             if newPlugin.hash == plugin.hash:
                                 raise Error("{0} already exists in plugin list.".format(newPlugin.name))
                         plugins.append(newPlugin)
+                        pluginsAdded += 1
                     except Exception as e:
                         self.warn(str(e))
             else:
@@ -142,8 +144,10 @@ class MainDialog(wx.Dialog):
                         if newPlugin.hash == plugin.hash:
                             raise Error("{0} already exists in plugin list.".format(newPlugin.name))
                     plugins.append(newPlugin)
+                    pluginsAdded += 1
                 except Exception as e:
                     self.warn(str(e))
+        self.changeText("{0} plugins added!".format(pluginsAdded))
         return self.updatePluginList()
         
     def updatePluginList(self):
