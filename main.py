@@ -7,6 +7,32 @@ import wx
 import webbrowser
 
 plugins = []
+class inputDialog(wx.Dialog):
+    def __init__(self, *args, **kw):
+        wx.Dialog.__init__(self)
+        self.InitUI()
+
+    def InitUI(self):
+        pnl = wx.Panel(self)
+        vbox = wx.BoxSizer(wx.VERTICAL)
+        sb = wx.StaticBox(pnl, label='Colors')
+        sbs = wx.StaticBoxSizer(sb, orient=wx.VERTICAL)        
+        hbox1 = wx.BoxSizer(wx.HORIZONTAL)        
+        hbox1.Add(wx.RadioButton(pnl, label='Custom'))
+        hbox1.Add(wx.TextCtrl(pnl), flag=wx.LEFT, border=5)
+        sbs.Add(hbox1)
+        pnl.SetSizer(sbs)
+        hbox2 = wx.BoxSizer(wx.HORIZONTAL)
+        okButton = wx.Button(self, label='Ok')
+        closeButton = wx.Button(self, label='Close')
+        hbox2.Add(okButton)
+        hbox2.Add(closeButton, flag=wx.LEFT, border=5)
+        self.SetSizer(vbox)
+        okButton.Bind(wx.EVT_BUTTON, self.OnClose)
+        closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
+
+    def OnClose(self, e):
+        self.Destroy()
 
 class FileDropTarget(wx.FileDropTarget):
     def __init__(self, obj):
@@ -39,7 +65,10 @@ class FileDropTarget(wx.FileDropTarget):
 class MainDialog(wx.Dialog):
     def __init__(self, parent, id, title):
         wx.Dialog.__init__(self, parent, id, title, size=(1200,500), style=wx.DEFAULT_DIALOG_STYLE)
+        self.initUI()
+        self.bindEvent()
 
+    def initUI(self):
         self.hbox = wx.BoxSizer(wx.HORIZONTAL)
         self.textBox, self.buttonBox, self.controlBox = wx.BoxSizer(wx.VERTICAL), wx.BoxSizer(wx.VERTICAL), wx.BoxSizer(wx.VERTICAL)
         self.pluginsBox, self.versionsBox = wx.BoxSizer(wx.VERTICAL), wx.BoxSizer(wx.VERTICAL)
@@ -93,13 +122,16 @@ class MainDialog(wx.Dialog):
         
         self.SetSizer(self.hbox)
         
+    def bindEvent(self):
         self.Bind(wx.EVT_BUTTON, self.onClose, id=0)
         self.Bind(wx.EVT_BUTTON, self.onLazy, id=1)
         self.Bind(wx.EVT_BUTTON, self.onDownload, id=2)
-        
         self.plugins.Bind(wx.EVT_LIST_ITEM_SELECTED, self.onPluginSelected, self.plugins)
         self.versions.Bind(wx.EVT_LIST_ITEM_SELECTED, self.onVersionSelected, self.versions)
         self.versions.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.onVersionDoubleClick, self.versions)
+        
+        wx.MessageBox('Download completed', 'Info', wx.OK | wx.ICON_INFORMATION)
+        fileInputDialog = inputDialog()
         
     def onClose(self, event):
         self.Close()
