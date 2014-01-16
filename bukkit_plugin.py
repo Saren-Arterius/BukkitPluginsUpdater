@@ -61,7 +61,7 @@ class bukkitPlugin(ZipFile):
                 resp = opener.open(sorryReqUrl)
                 return resp.read().decode()
             except Exception as e:
-                raise Error("Failed to use google!\nProbably you used too much!\n{0}".format(str(e)))
+                raise Error("Failed to use google! Probably you used too much!\n{0}".format(str(e)))
 
     def __getBukkitDevName(self):
         bukkitDevName = self.database.selectRow(self.packageName)
@@ -82,7 +82,7 @@ class bukkitPlugin(ZipFile):
                     self.database.newRow(self.packageName, bukkitDevName)
                     print("{0}: bukkitDevName ({1}) for package ({2}) inserted!".format(self.name, bukkitDevName, self.packageName))
                     return bukkitDevName
-        raise Error("Failed to get bukkit files page, \nor plugin is not available on bukkitdev.")
+        raise Error("Failed to get bukkit files page, or plugin is not available on bukkitdev.")
 
     def __getFilesPage(self):
         try:
@@ -131,11 +131,12 @@ class bukkitPlugin(ZipFile):
             opener.addheaders = [('User-agent', 'Mozilla/5.0')]
             resp = opener.open(downloadPageUrl)
             downloadPage = resp.read().decode()
-            return pq(downloadPage)(".user-action-download").find("a").attr("href")
+            versionHash = findall("([a-f\d]{32})", downloadPage)[0]
+            if versionHash == self.fileHash:
+                raise Error("You already own that file!")
+            return [versionHash, pq(downloadPage)(".user-action-download").find("a").attr("href")]
         except KeyError:
             raise Error("Bukkit page is broken?")
-        except:
-            raise Error("Failed to get plugin download link!")
 
 if __name__ == "__main__": #Test
     plugin = bukkitPlugin(argv[1])

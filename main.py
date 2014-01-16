@@ -3,6 +3,9 @@ from bukkit_plugin import *
 from error import Error
 from Levenshtein import ratio
 from multiprocessing import Pool
+from time import time
+from textwrap import fill
+import os
 import datetime
 import wx
 import webbrowser
@@ -13,21 +16,7 @@ class textEntryDialog(wx.TextEntryDialog):
     def __init__(self, obj):
         wx.Dialog.__init__(self)
         self.obj = obj
-        self.Create(obj, "Input correct BukkitDev plugin name here,\nor leave it blank to get the name automatically.")
-        
-    def getInput(self):
-        if self.ShowModal() == wx.ID_OK:
-            self.Destroy()
-            return [True, self.GetValue()]
-        else:
-            self.Destroy()
-            return False
-
-class textEntryDialog(wx.TextEntryDialog):
-    def __init__(self, obj):
-        wx.Dialog.__init__(self)
-        self.obj = obj
-        self.Create(obj, "Input correct BukkitDev plugin name here,\nor leave it blank to get the name automatically.")
+        self.Create(obj, "Input correct BukkitDev plugin name here, or leave it blank to get the name automatically.")
         
     def getInput(self):
         if self.ShowModal() == wx.ID_OK:
@@ -129,7 +118,42 @@ class MainDialog(wx.Dialog):
         return self.changeText("You are lazy, huh?")
         
     def onDownload(self, event):
-        return self.changeText("You want to download something, huh?")
+        whichPlugin = self.plugins.GetFocusedItem()
+        whichVersion = self.versions.GetFocusedItem()
+        if whichPlugin != -1 and whichVersion != -1:
+            try:
+                hash = self.plugins.GetItemText(whichPlugin)
+                for plugin in plugins:
+                    if hash == plugin.hash:
+                        result = plugin.getVersionUrl(whichVersion) # result = [md5, url]
+                        break
+                return self.saveToDisk(plugin, result[1], whichVersion, result[0])
+            except Exception as e:
+                return self.warn(str(e))
+        else:
+            return self.changeText("You want to download something, huh?")
+            
+    def saveToDisk(self, plugin, url, whichVersion, hash):
+        try:
+            self.changeText("Start downloading plugin...")
+            saveDir = plugin.origin + "\\downloads\\" + datetime.datetime.fromtimestamp(time()).strftime('%Y-%m-%d')
+            saveFileName = plugin.versions[whichVersion]["Filename"]
+            savePath = saveDir + "\\" + saveFileName
+            if not os.path.exists(saveDir):
+                self.changeText("Making directory: {0}".format(saveDir))
+                os.makedirs(saveDir)
+            if os.path.exists(savePath):
+                existingPlugin = bukkitPlugin(savePath)
+                if existingPlugin.fileHash == hash:
+                    raise Error("You already own that file: {0}".format(savePath))
+            urllib.request.urlretrieve(url, savePath)
+            downloadedPlugin = bukkitPlugin(savePath)
+            if downloadedPlugin.fileHash == hash:
+                return self.changeText("Download success! File is saved at: {0}".format(savePath))
+            else:
+                raise Error("Downloaded file does not match hash!")
+        except Exception as e:
+            return self.warn(str(e))
         
     def onPluginSelected(self, event):
         self.changeText("Loading...Please wait...")
@@ -139,14 +163,14 @@ class MainDialog(wx.Dialog):
             if result["sim"] >= 0.8:
                 return self.changeText("Plugin info downloaded from BukkitDev! \n(Similarity: {0})".format(round(result["sim"], 3)))
             else:
-                return self.warn("Warning: The BukkitDev plugin name\nis kind of different! Use with caution.\n(bukkitDevName: {0})\n(Similarity: {1})".format(result["bukkitDevName"], round(result["sim"], 3)))
+                return self.warn("Warning: The BukkitDev plugin name is kind of different! Use with caution.\n(bukkitDevName: {0})\n(Similarity: {1})".format(result["bukkitDevName"], round(result["sim"], 3)))
         return False
         
     def onVersionDoubleClick(self, event):
         return webbrowser.open(event.GetText())
         
     def onVersionSelected(self, event):
-        return self.changeText("Double click to open plugin update log,\nor click download button to \ndownload the plugin and save to disk.")
+        return self.changeText("Double click to open plugin update log, or click download button to download the plugin and save to disk.")
         
     def onControlPanelDoubleClick(self, event): #Add files/folders
         openFileDialog = wx.FileDialog(self, "Open Jar files", "", "", "Jar files (*.jar)|*.jar", wx.FD_OPEN | wx.FD_FILE_MUST_EXIST | wx.FD_MULTIPLE)
@@ -170,31 +194,44 @@ class MainDialog(wx.Dialog):
                     return self.warn("I will ask Google again for it's BukkitDev name.")
             else:
                 if self.updateRow(result[1], hash):
-                    return self.changeText("Successfully changed plugin's\nBukkitDev name!")
+                    return self.changeText("Successfully changed plugin's BukkitDev name!")
         else:
             return self.onControlPanelDoubleClick(event)
         
     def changeText(self, text):
         self.text.SetForegroundColour((0,0,0))
-        self.text.SetLabel(text)
+        self.text.SetLabel(fill(text, 40))
         return True
         
     def warn(self, text):
         self.text.SetForegroundColour((255,0,0))
-        self.text.SetLabel(text)
+        self.text.SetLabel(fill(text, 40))
         return True
 
     def addPluginFiles(self, filenames):
         for filename in filenames:
-            try:
-                newPlugin = bukkitPlugin(filename)
-                print(newPlugin)
-                for plugin in plugins:
-                    if newPlugin.hash == plugin.hash:
-                        raise Error("{0} already exists in plugin list.".format(newPlugin.name))
-                plugins.append(newPlugin)
-            except Exception as e:
-                self.warn(str(e))
+            if os.path.isdir(filename):
+                for fileInDir in os.listdir(filename):
+                    fileInDir = filename + "\\" + fileInDir
+                    try:
+                        newPlugin = bukkitPlugin(fileInDir)
+                        print(newPlugin)
+                        for plugin in plugins:
+                            if newPlugin.hash == plugin.hash:
+                                raise Error("{0} already exists in plugin list.".format(newPlugin.name))
+                        plugins.append(newPlugin)
+                    except Exception as e:
+                        self.warn(str(e))
+            else:
+                try:
+                    newPlugin = bukkitPlugin(filename)
+                    print(newPlugin)
+                    for plugin in plugins:
+                        if newPlugin.hash == plugin.hash:
+                            raise Error("{0} already exists in plugin list.".format(newPlugin.name))
+                    plugins.append(newPlugin)
+                except Exception as e:
+                    self.warn(str(e))
         return self.updatePluginList()
         
     def updatePluginList(self):
