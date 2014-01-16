@@ -3,10 +3,9 @@ from os.path import dirname, realpath
 import sqlite3
 
 class database(object):
-
     def __init__(self):
-        dbFile = dirname(realpath(__file__)) + "\\" + "database.db"
-        self.conn = sqlite3.connect(dbfile)
+        self.dbFile = dirname(realpath(__file__)) + "\\" + "database.db"
+        self.conn = sqlite3.connect(self.dbFile)
         
     def createTables(self):
         try:
@@ -24,7 +23,7 @@ class database(object):
             cur.close()
             return True
         except sqlite3.OperationalError:
-            return False
+            return self.createTables()
     
     def selectRow(self, packageName):
         try:
@@ -37,7 +36,8 @@ class database(object):
                 return row[0]
             return False
         except sqlite3.OperationalError:
-            return False
+            if self.areTablesExist():
+                return self.selectRow(packageName)
     
     def newRow(self, packageName, bukkitDevName):
         try:
@@ -47,7 +47,8 @@ class database(object):
             self.conn.commit()
             return True
         except sqlite3.OperationalError:
-            return False
+            if self.areTablesExist():
+                return self.newRow(packageName, bukkitDevName)
             
     def updateRow(self, packageName, bukkitDevName):
         try:
@@ -57,4 +58,9 @@ class database(object):
             self.conn.commit()
             return True
         except sqlite3.OperationalError:
-            return False
+            if self.areTablesExist():
+                return self.updateRow(packageName, bukkitDevName)
+            
+if __name__ == "__main__": #Test
+    database = database()
+    database.newRow("test.package", "goodName")

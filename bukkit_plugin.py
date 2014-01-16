@@ -20,10 +20,10 @@ class bukkitPlugin(ZipFile):
             self.name = sub("\r|\n", "", findall("name: (.*)", yaml)[0])
             self.version = sub("\r|\n", "", findall("version: (.*)", yaml)[0])
             self.packageName = sub("\r|\n", "", findall("main: (.*)", yaml)[0])
-            self.hash = sha256(bytes("{0}{1}{2}{3}".format(self.origin, self.name, self.version, yaml), "utf-8")).hexdigest()
+            self.hash = sha256(bytes("{0}{1}".format(self.origin, yaml), "utf-8")).hexdigest()
         
     def __str__(self):
-        return "Craftbukkit plugin: {0} {1}\nFile origin: {2}\nHash: {3}\n".format(self.name, self.version, self.origin, self.hash)
+        return "Craftbukkit plugin: {0} {1}\nFile origin: {2}\nPackage name: {3}\nHash: {4}\n".format(self.name, self.version, self.origin, self.packageName, self.hash)
 
     def __getGoogleResult(self):
         try:
@@ -54,8 +54,10 @@ class bukkitPlugin(ZipFile):
         self.database = database()
         bukkitDevName = self.database.selectRow(self.packageName)
         if bukkitDevName:
+            print("{0}: bukkitDevName found!".format(self.name))
             return bukkitDevName
         else:
+            print("{0}: bukkitDevName not found, using Google.".format(self.name))
             try:
                 self.googleResult
             except:
@@ -64,7 +66,8 @@ class bukkitPlugin(ZipFile):
                 bukkitDevName = findall("dev.bukkit.org/bukkit-plugins/(.+)/", pq(elem).attr("href"))
                 bukkitDevName = str(split("/", bukkitDevName[0])[0])
                 if bukkitDevName:
-                    self.database.newRow(packageName, bukkitDevName):
+                    self.database.newRow(self.packageName, bukkitDevName)
+                    print("{0}: bukkitDevName ({1}) for package ({2}) inserted!".format(self.name, bukkitDevName, self.packageName))
                     return bukkitDevName
         raise Error("Failed to get bukkit files page, \nor plugin is not available on bukkitdev.")
 
