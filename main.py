@@ -267,7 +267,7 @@ class MainDialog(wx.Dialog):
             savePath = saveDir + "\\" + saveFileName
             
             if plugin.areHashesMatch(plugin.fileHash, cmpUrl):
-                raise Error("You already own that file in plugins folder: {0}".format(savePath))
+                raise Error("You already own that file in plugins folder: {0}".format(plugin.path))
             elif os.path.exists(savePath):
                 existingPlugin = bukkitPlugin(savePath)
                 if existingPlugin.areHashesMatch(existingPlugin.fileHash, cmpUrl):
