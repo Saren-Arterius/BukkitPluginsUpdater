@@ -93,7 +93,7 @@ class MainDialog(wx.Dialog):
         self.hbox.Add(self.versionsBox, 2, wx.EXPAND)
         
         self.SetSizer(self.hbox)
-
+        
     def bindEvent(self):
         self.Bind(wx.EVT_BUTTON, self.onClose, id=0)
         self.Bind(wx.EVT_BUTTON, self.onLazy, id=1)
@@ -108,6 +108,98 @@ class MainDialog(wx.Dialog):
         self.plugins.Bind(wx.EVT_LIST_ITEM_SELECTED, self.onPluginSelected, self.plugins)
         self.versions.Bind(wx.EVT_LIST_ITEM_SELECTED, self.onVersionSelected, self.versions)
         self.versions.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.onVersionDoubleClick, self.versions)
+        self.Bind(wx.EVT_CHAR_HOOK, self.onDeleteKey)
+
+    def changeText(self, text):
+        self.text.SetForegroundColour((0,0,0))
+        self.text.SetLabel(fill(text, 40))
+        return True
+        
+    def warn(self, text):
+        self.text.SetForegroundColour((255,0,0))
+        self.text.SetLabel(fill(text, 40))
+        return True
+
+    def addPluginFiles(self, filenames):
+        for filename in filenames:
+            if os.path.isdir(filename):
+                for fileInDir in os.listdir(filename):
+                    fileInDir = filename + "\\" + fileInDir
+                    try:
+                        newPlugin = bukkitPlugin(fileInDir)
+                        print(newPlugin)
+                        for plugin in plugins:
+                            if newPlugin.hash == plugin.hash:
+                                raise Error("{0} already exists in plugin list.".format(newPlugin.name))
+                        plugins.append(newPlugin)
+                    except Exception as e:
+                        self.warn(str(e))
+            else:
+                try:
+                    newPlugin = bukkitPlugin(filename)
+                    print(newPlugin)
+                    for plugin in plugins:
+                        if newPlugin.hash == plugin.hash:
+                            raise Error("{0} already exists in plugin list.".format(newPlugin.name))
+                    plugins.append(newPlugin)
+                except Exception as e:
+                    self.warn(str(e))
+        return self.updatePluginList()
+        
+    def updatePluginList(self):
+        self.plugins.DeleteAllItems()
+        for plugin in plugins:
+            num_items = self.plugins.GetItemCount()
+            self.plugins.InsertItem(num_items, plugin.hash)
+            self.plugins.SetItem(num_items, 1, plugin.name)
+            self.plugins.SetItem(num_items, 2, plugin.version)
+        return True
+        
+    def updateVersionList(self, hash):
+        for plugin in plugins:
+            if hash == plugin.hash:
+                try:
+                    for index, row in enumerate(plugin.getAllVersions()):
+                        self.versions.InsertItem(index, row["Name"]["href"])
+                        self.versions.SetItem(index, 1, row["Name"]["Name"])
+                        self.versions.SetItem(index, 2, row["Release type"])
+                        self.versions.SetItem(index, 3, row["Status"])
+                        self.versions.SetItem(index, 4, datetime.datetime.fromtimestamp(row["Date"]).strftime('%Y-%m-%d'))
+                        try:
+                            if len(row["Game version"]) >= 2:
+                                self.versions.SetItem(index, 5, "{0} - {1}".format(row["Game version"][-1], row["Game version"][0]))
+                            else:
+                                self.versions.SetItem(index, 5, "{0}".format(row["Game version"][0]))
+                        except:
+                            self.versions.SetItem(index, 5, "None")
+                        self.versions.SetItem(index, 6, row["Filename"])
+                        self.versions.SetItem(index, 7, str(row["Downloads"]))
+                    return {"sim": ratio(plugin.name.lower(), plugin.bukkitDevName.lower()), "bukkitDevName": plugin.bukkitDevName}
+                except Exception as e:
+                    return self.warn(str(e))
+        raise Error("WTF?")
+        
+    def updateRow(self, bukkitDevName, hash):
+        for plugin in plugins:
+            if hash == plugin.hash:
+                if plugin.database.updateRow(plugin.packageName, bukkitDevName):
+                    return self.reload(plugin)
+                
+    def deleteRow(self, hash):
+        for plugin in plugins:
+            if hash == plugin.hash:
+                if plugin.database.deleteRow(plugin.packageName):
+                    return self.reload(plugin)
+                
+    def getBukkitDevName(self, hash):
+        for plugin in plugins:
+            if hash == plugin.hash:
+                return plugin.bukkitDevName
+                
+    def reload(self, plugin):
+        path = plugin.path
+        plugins.remove(plugin)
+        return self.addPluginFiles([path])
 
     def onClose(self, event):
         self.Close()
@@ -126,9 +218,13 @@ class MainDialog(wx.Dialog):
                         return self.changeText("You stopped being lazy.")
                     self.plugins.Select(i)
                     self.plugins.Focus(i)
+                    newVal += 250
+                    if not process.Update(newVal):
+                        process = ""
+                        return self.changeText("You stopped being lazy.")
                     self.versions.Select(0)
                     self.versions.Focus(0)
-                    newVal += 500
+                    newVal += 250
                     if not process.Update(newVal, "Downloading latest version of {0}...".format(self.plugins.GetItemText(i, 1))):
                         process = ""
                         return self.changeText("You stopped being lazy.")
@@ -222,98 +318,7 @@ class MainDialog(wx.Dialog):
                     return self.changeText("Successfully changed plugin's BukkitDev name!")
         else:
             return self.onControlPanelDoubleClick(event)
-        
-    def changeText(self, text):
-        self.text.SetForegroundColour((0,0,0))
-        self.text.SetLabel(fill(text, 40))
-        return True
-        
-    def warn(self, text):
-        self.text.SetForegroundColour((255,0,0))
-        self.text.SetLabel(fill(text, 40))
-        return True
-
-    def addPluginFiles(self, filenames):
-        for filename in filenames:
-            if os.path.isdir(filename):
-                for fileInDir in os.listdir(filename):
-                    fileInDir = filename + "\\" + fileInDir
-                    try:
-                        newPlugin = bukkitPlugin(fileInDir)
-                        print(newPlugin)
-                        for plugin in plugins:
-                            if newPlugin.hash == plugin.hash:
-                                raise Error("{0} already exists in plugin list.".format(newPlugin.name))
-                        plugins.append(newPlugin)
-                    except Exception as e:
-                        self.warn(str(e))
-            else:
-                try:
-                    newPlugin = bukkitPlugin(filename)
-                    print(newPlugin)
-                    for plugin in plugins:
-                        if newPlugin.hash == plugin.hash:
-                            raise Error("{0} already exists in plugin list.".format(newPlugin.name))
-                    plugins.append(newPlugin)
-                except Exception as e:
-                    self.warn(str(e))
-        return self.updatePluginList()
-        
-    def updatePluginList(self):
-        self.plugins.DeleteAllItems()
-        for plugin in plugins:
-            num_items = self.plugins.GetItemCount()
-            self.plugins.InsertItem(num_items, plugin.hash)
-            self.plugins.SetItem(num_items, 1, plugin.name)
-            self.plugins.SetItem(num_items, 2, plugin.version)
-        return True
-        
-    def updateVersionList(self, hash):
-        for plugin in plugins:
-            if hash == plugin.hash:
-                try:
-                    for index, row in enumerate(plugin.getAllVersions()):
-                        self.versions.InsertItem(index, row["Name"]["href"])
-                        self.versions.SetItem(index, 1, row["Name"]["Name"])
-                        self.versions.SetItem(index, 2, row["Release type"])
-                        self.versions.SetItem(index, 3, row["Status"])
-                        self.versions.SetItem(index, 4, datetime.datetime.fromtimestamp(row["Date"]).strftime('%Y-%m-%d'))
-                        try:
-                            if len(row["Game version"]) >= 2:
-                                self.versions.SetItem(index, 5, "{0} - {1}".format(row["Game version"][-1], row["Game version"][0]))
-                            else:
-                                self.versions.SetItem(index, 5, "{0}".format(row["Game version"][0]))
-                        except:
-                            self.versions.SetItem(index, 5, "None")
-                        self.versions.SetItem(index, 6, row["Filename"])
-                        self.versions.SetItem(index, 7, str(row["Downloads"]))
-                    return {"sim": ratio(plugin.name.lower(), plugin.bukkitDevName.lower()), "bukkitDevName": plugin.bukkitDevName}
-                except Exception as e:
-                    return self.warn(str(e))
-        raise Error("WTF?")
-        
-    def updateRow(self, bukkitDevName, hash):
-        for plugin in plugins:
-            if hash == plugin.hash:
-                if plugin.database.updateRow(plugin.packageName, bukkitDevName):
-                    return self.reload(plugin)
-                
-    def deleteRow(self, hash):
-        for plugin in plugins:
-            if hash == plugin.hash:
-                if plugin.database.deleteRow(plugin.packageName):
-                    return self.reload(plugin)
-                
-    def getBukkitDevName(self, hash):
-        for plugin in plugins:
-            if hash == plugin.hash:
-                return plugin.bukkitDevName
-                
-    def reload(self, plugin):
-        path = plugin.path
-        plugins.remove(plugin)
-        return self.addPluginFiles([path])
-
+            
 class Main(wx.App):
     def OnInit(self):
         dia = MainDialog(None, -1, 'Bukkit plugin updater v0.0.1')
