@@ -2,6 +2,7 @@
 from bukkit_plugin import *
 from error import Error
 from Levenshtein import ratio
+from multiprocessing import Pool
 import datetime
 import wx
 import webbrowser
@@ -125,28 +126,7 @@ class MainDialog(wx.Dialog):
     def onPluginSelected(self, event):
         self.changeText("Loading...")
         self.versions.DeleteAllItems()
-        hash = event.GetText()
-        for plugin in plugins:
-            if hash == plugin.hash:
-                try:
-                    for index, row in enumerate(plugin.getAllVersions()):
-                        self.versions.InsertItem(index, row["Name"]["href"])
-                        self.versions.SetItem(index, 1, row["Name"]["Name"])
-                        self.versions.SetItem(index, 2, row["Release type"])
-                        self.versions.SetItem(index, 3, row["Status"])
-                        self.versions.SetItem(index, 4, datetime.datetime.fromtimestamp(row["Date"]).strftime('%Y-%m-%d'))
-                        try:
-                            if len(row["Game version"]) >= 2:
-                                self.versions.SetItem(index, 5, "{0} - {1}".format(row["Game version"][-1], row["Game version"][0]))
-                            else:
-                                self.versions.SetItem(index, 5, "{0}".format(row["Game version"][0]))
-                        except:
-                            self.versions.SetItem(index, 5, "None")
-                        self.versions.SetItem(index, 6, row["Filename"])
-                        self.versions.SetItem(index, 7, str(row["Downloads"]))
-                        sim = ratio(plugin.name.lower(), plugin.bukkitDevName.lower())
-                except Exception as e:
-                    return self.warn(str(e))
+        sim = self.updateVersionList(event.GetText())
         if sim >= 0.8:
             return self.changeText("Plugin info downloaded from BukkitDev! \n(Similarity: {0})".format(round(sim, 2)))
         else:
@@ -190,6 +170,30 @@ class MainDialog(wx.Dialog):
             self.plugins.SetItem(num_items, 2, plugin.version)
         return True
         
+    def updateVersionList(self, hash):
+        for plugin in plugins:
+            if hash == plugin.hash:
+                try:
+                    for index, row in enumerate(plugin.getAllVersions()):
+                        self.versions.InsertItem(index, row["Name"]["href"])
+                        self.versions.SetItem(index, 1, row["Name"]["Name"])
+                        self.versions.SetItem(index, 2, row["Release type"])
+                        self.versions.SetItem(index, 3, row["Status"])
+                        self.versions.SetItem(index, 4, datetime.datetime.fromtimestamp(row["Date"]).strftime('%Y-%m-%d'))
+                        try:
+                            if len(row["Game version"]) >= 2:
+                                self.versions.SetItem(index, 5, "{0} - {1}".format(row["Game version"][-1], row["Game version"][0]))
+                            else:
+                                self.versions.SetItem(index, 5, "{0}".format(row["Game version"][0]))
+                        except:
+                            self.versions.SetItem(index, 5, "None")
+                        self.versions.SetItem(index, 6, row["Filename"])
+                        self.versions.SetItem(index, 7, str(row["Downloads"]))
+                    return ratio(plugin.name.lower(), plugin.bukkitDevName.lower())
+                except Exception as e:
+                    return self.warn(str(e))
+        raise Error("WTF?")
+
 class Main(wx.App):
     def OnInit(self):
         dia = MainDialog(None, -1, 'Bukkit plugin updater')
@@ -197,5 +201,6 @@ class Main(wx.App):
         dia.Destroy()
         return True
 
-app = Main()
-app.MainLoop()
+if __name__ == "__main__":
+    app = Main()
+    app.MainLoop()
