@@ -136,11 +136,11 @@ class MainDialog(wx.Dialog):
     def saveToDisk(self, plugin, url, whichVersion, hash):
         try:
             self.changeText("Start downloading plugin...")
-            saveDir = plugin.origin + "\\downloads\\" + datetime.datetime.fromtimestamp(time()).strftime('%Y-%m-%d')
+            saveDir = plugin.origin + "\\__plugindownloads__\\" + datetime.datetime.fromtimestamp(time()).strftime('%Y-%m-%d')
             saveFileName = plugin.versions[whichVersion]["Filename"]
             savePath = saveDir + "\\" + saveFileName
             if not os.path.exists(saveDir):
-                self.changeText("Making directory: {0}".format(saveDir))
+                print("Making directory: {0}".format(saveDir))
                 os.makedirs(saveDir)
             if os.path.exists(savePath):
                 existingPlugin = bukkitPlugin(savePath)
@@ -161,9 +161,9 @@ class MainDialog(wx.Dialog):
         result = self.updateVersionList(event.GetText())
         if isinstance(result, dict):
             if result["sim"] >= 0.8:
-                return self.changeText("Plugin info downloaded from BukkitDev! \n(Similarity: {0})".format(round(result["sim"], 3)))
+                return self.changeText("Plugin info downloaded from BukkitDev! (Similarity: {0})".format(round(result["sim"], 3)))
             else:
-                return self.warn("Warning: The BukkitDev plugin name is kind of different! Use with caution.\n(bukkitDevName: {0})\n(Similarity: {1})".format(result["bukkitDevName"], round(result["sim"], 3)))
+                return self.warn("Warning: The BukkitDev plugin name is kind of different! Use with caution. (bukkitDevName: {0}) (Similarity: {1})".format(result["bukkitDevName"], round(result["sim"], 3)))
         return False
         
     def onVersionDoubleClick(self, event):
