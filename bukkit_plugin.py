@@ -1,4 +1,5 @@
 #!/usr/bin/python3.3
+from database import *
 from sys import argv
 from zipfile import ZipFile, is_zipfile
 from re import findall, sub, split
@@ -18,10 +19,7 @@ class bukkitPlugin(ZipFile):
             self.origin = dirname(path)
             self.name = sub("\r|\n", "", findall("name: (.*)", yaml)[0])
             self.version = sub("\r|\n", "", findall("version: (.*)", yaml)[0])
-            try:
-                self.author = sub("\r|\n", "", findall("author: (.*)", yaml)[0])
-            except:
-                self.author = ""
+            self.packageName = sub("\r|\n", "", findall("main: (.*)", yaml)[0])
             self.hash = sha256(bytes("{0}{1}{2}{3}".format(self.origin, self.name, self.version, yaml), "utf-8")).hexdigest()
         
     def __str__(self):
@@ -33,7 +31,6 @@ class bukkitPlugin(ZipFile):
             cookieFile = dirname(realpath(__file__)) + "\\" + "cookie.txt"
             cj = http.cookiejar.LWPCookieJar(cookieFile)
             opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
-            opener = urllib.request.build_opener()
             opener.addheaders = [('User-agent', 'Mozilla/5.0')]
             resp = opener.open(url)
             return resp.read().decode()
@@ -46,8 +43,6 @@ class bukkitPlugin(ZipFile):
                 gContinue = url
                 webbrowser.open(imageUrl)
                 captcha = input("Please type captcha here: ")
-                opener = urllib.request.build_opener()
-                opener.addheaders = [('User-agent', 'Mozilla/5.0')]
                 payload = [urllib.parse.quote_plus(url), urllib.parse.quote_plus(id), urllib.parse.quote_plus(captcha), urllib.parse.quote_plus("Submit")]
                 sorryReqUrl = "https://ipv4.google.com/sorry/CaptchaRedirect?continue={0}&id={1}&captcha={2}&submit={3}".format(payload)
                 resp = opener.open(sorryReqUrl)
@@ -55,23 +50,35 @@ class bukkitPlugin(ZipFile):
             except Exception as e:
                 raise Error("Failed to use google!\nProbably you used too much!\n{0}".format(str(e)))
 
+    def __getBukkitDevName(self):
+        self.database = database()
+        bukkitDevName = self.database.selectRow(self.packageName)
+        if bukkitDevName:
+            return bukkitDevName
+        else:
+            try:
+                self.googleResult
+            except:
+                self.googleResult = self.__getGoogleResult()
+            for elem in pq(self.googleResult)(".r").find("a"):
+                bukkitDevName = findall("dev.bukkit.org/bukkit-plugins/(.+)/", pq(elem).attr("href"))
+                bukkitDevName = str(split("/", bukkitDevName[0])[0])
+                if bukkitDevName:
+                    self.database.newRow(packageName, bukkitDevName):
+                    return bukkitDevName
+        raise Error("Failed to get bukkit files page, \nor plugin is not available on bukkitdev.")
+
     def __getFilesPage(self):
         try:
-            self.googleResult
+            self.bukkitDevName
         except:
-            self.googleResult = self.__getGoogleResult()
-        for elem in pq(self.googleResult)(".r").find("a"):
-            bukkitDevName = findall("dev.bukkit.org/bukkit-plugins/(.+)/", pq(elem).attr("href"))
-            bukkitDevName = str(split("/", bukkitDevName[0])[0])
-            if bukkitDevName:
-                url = "http://dev.bukkit.org/bukkit-plugins/{0}/files/".format(bukkitDevName)
-                self.bukkitDevName = bukkitDevName
-                opener = urllib.request.build_opener()
-                opener.addheaders = [('User-agent', 'Mozilla/5.0')]
-                resp = opener.open(url)
-                return resp.read().decode()
-        raise Error("Failed to get bukkit files page, \nor plugin is not available on bukkitdev.")
-        
+            self.bukkitDevName = self.__getBukkitDevName()
+            url = "http://dev.bukkit.org/bukkit-plugins/{0}/files/".format(self.bukkitDevName)
+            opener = urllib.request.build_opener()
+            opener.addheaders = [('User-agent', 'Mozilla/5.0')]
+            resp = opener.open(url)
+            return resp.read().decode()
+
     def getAllVersions(self):
         try:
             return self.versions
