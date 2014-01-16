@@ -263,11 +263,11 @@ class MainDialog(wx.Dialog):
             savePath = saveDir + "\\" + saveFileName
             
             if plugin.areHashesMatch(plugin.fileHash, cmpUrl):
-                raise Error("You already own that file: {0}".format(savePath))
+                raise Error("You already own that file in plugins folder: {0}".format(savePath))
             elif os.path.exists(savePath):
                 existingPlugin = bukkitPlugin(savePath)
                 if existingPlugin.areHashesMatch(existingPlugin.fileHash, cmpUrl):
-                    raise Error("You already own that file: {0}".format(savePath))
+                    raise Error("You already own that file in downloads folder: {0}".format(savePath))
             elif not os.path.exists(saveDir):
                 print("Making directory: {0}".format(saveDir))
                 os.makedirs(saveDir)
@@ -275,7 +275,6 @@ class MainDialog(wx.Dialog):
             urllib.request.urlretrieve(downUrl, savePath)
             
             downloadedPlugin = bukkitPlugin(savePath)
-            print(downloadedPlugin)
             if downloadedPlugin.areHashesMatch(downloadedPlugin.fileHash, cmpUrl):
                 return self.changeText("Download success! File is saved at: {0}".format(savePath))
             else:
