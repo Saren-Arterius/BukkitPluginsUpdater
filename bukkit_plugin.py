@@ -47,7 +47,7 @@ class bukkitPlugin(ZipFile):
             opener.addheaders = [('User-agent', 'Mozilla/5.0')]
             resp = opener.open(url)
             return resp.read().decode()
-        except Exception as e:
+        except Exception as e: #Not tested
             try:
                 print("Failed to use google!\nProbably you used too much!\n{0}\nAttemping human captcha...".format(str(e)))
                 errorPage = e.read().decode()
