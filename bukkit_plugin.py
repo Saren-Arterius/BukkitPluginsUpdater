@@ -5,7 +5,7 @@ from zipfile import ZipFile, is_zipfile
 from re import findall, sub, split
 from pyquery import PyQuery as pq
 from error import Error
-from hashlib import sha256
+from hashlib import md5
 from os.path import dirname, realpath
 import http.cookiejar
 import webbrowser
@@ -16,15 +16,27 @@ class bukkitPlugin(ZipFile):
         zip = ZipFile(path)
         with zip.open("plugin.yml") as pluginInfo:
             yaml = pluginInfo.read().decode()
+            self.path = path
             self.origin = dirname(path)
             self.name = sub("\r|\n", "", findall("name: (.*)", yaml)[0])
             self.version = sub("\r|\n", "", findall("version: (.*)", yaml)[0])
             self.packageName = sub("\r|\n", "", findall("main: (.*)", yaml)[0])
-            self.hash = sha256(bytes("{0}{1}".format(self.origin, yaml), "utf-8")).hexdigest()
+            self.hash = md5(bytes("{0}{1}".format(self.origin, yaml), "utf-8")).hexdigest()
+            self.fileHash = self.__getMD5()
         
     def __str__(self):
-        return "Craftbukkit plugin: {0} {1}\nFile origin: {2}\nPackage name: {3}\nHash: {4}\n".format(self.name, self.version, self.origin, self.packageName, self.hash)
-
+        return "Craftbukkit plugin: {0} {1}\nFile origin: {2}\nPackage name: {3}\nIdent hash: {4}\nFile hash: {5}\n".format(self.name, self.version, self.origin, self.packageName, self.hash, self.fileHash)
+        
+    def __getMD5(self):
+        with open(self.path, "rb") as file:
+            hash = md5()
+            while True:
+                piece = file.read(1024)
+                if piece:
+                    hash.update(piece)
+                else:
+                    return hash.hexdigest()
+    
     def __getGoogleResult(self):
         try:
             url = "http://www.google.com.hk/search?q=\"{0}\"+files+site%3Adev.bukkit.org%2Fbukkit-plugins".format(sub(" ", "+", self.name))
@@ -60,6 +72,7 @@ class bukkitPlugin(ZipFile):
             print("{0}: bukkitDevName not found, using Google.".format(self.name))
             try:
                 self.googleResult
+                print("Using cache.")
             except:
                 self.googleResult = self.__getGoogleResult()
             for elem in pq(self.googleResult)(".r").find("a"):
