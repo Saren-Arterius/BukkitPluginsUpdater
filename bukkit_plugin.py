@@ -23,6 +23,7 @@ class bukkitPlugin(ZipFile):
             self.packageName = sub("\r|\n", "", findall("main: (.*)", yaml)[0])
             self.hash = md5(bytes("{0}{1}".format(self.origin, yaml), "utf-8")).hexdigest()
             self.fileHash = self.__getMD5()
+            self.database = database()
         
     def __str__(self):
         return "Craftbukkit plugin: {0} {1}\nFile origin: {2}\nPackage name: {3}\nIdent hash: {4}\nFile hash: {5}\n".format(self.name, self.version, self.origin, self.packageName, self.hash, self.fileHash)
@@ -63,7 +64,6 @@ class bukkitPlugin(ZipFile):
                 raise Error("Failed to use google!\nProbably you used too much!\n{0}".format(str(e)))
 
     def __getBukkitDevName(self):
-        self.database = database()
         bukkitDevName = self.database.selectRow(self.packageName)
         if bukkitDevName:
             print("{0}: bukkitDevName found!".format(self.name))

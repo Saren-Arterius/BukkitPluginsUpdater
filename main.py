@@ -8,32 +8,34 @@ import wx
 import webbrowser
 
 plugins = []
-class inputDialog(wx.Dialog):
-    def __init__(self, *args, **kw):
+
+class textEntryDialog(wx.TextEntryDialog):
+    def __init__(self, obj):
         wx.Dialog.__init__(self)
-        self.InitUI()
+        self.obj = obj
+        self.Create(obj, "Input correct BukkitDev plugin name here,\nor leave it blank to get the name automatically.")
+        
+    def getInput(self):
+        if self.ShowModal() == wx.ID_OK:
+            self.Destroy()
+            return [True, self.GetValue()]
+        else:
+            self.Destroy()
+            return False
 
-    def InitUI(self):
-        pnl = wx.Panel(self)
-        vbox = wx.BoxSizer(wx.VERTICAL)
-        sb = wx.StaticBox(pnl, label='Colors')
-        sbs = wx.StaticBoxSizer(sb, orient=wx.VERTICAL)        
-        hbox1 = wx.BoxSizer(wx.HORIZONTAL)        
-        hbox1.Add(wx.RadioButton(pnl, label='Custom'))
-        hbox1.Add(wx.TextCtrl(pnl), flag=wx.LEFT, border=5)
-        sbs.Add(hbox1)
-        pnl.SetSizer(sbs)
-        hbox2 = wx.BoxSizer(wx.HORIZONTAL)
-        okButton = wx.Button(self, label='Ok')
-        closeButton = wx.Button(self, label='Close')
-        hbox2.Add(okButton)
-        hbox2.Add(closeButton, flag=wx.LEFT, border=5)
-        self.SetSizer(vbox)
-        okButton.Bind(wx.EVT_BUTTON, self.OnClose)
-        closeButton.Bind(wx.EVT_BUTTON, self.OnClose)
-
-    def OnClose(self, e):
-        self.Destroy()
+class textEntryDialog(wx.TextEntryDialog):
+    def __init__(self, obj):
+        wx.Dialog.__init__(self)
+        self.obj = obj
+        self.Create(obj, "Input correct BukkitDev plugin name here,\nor leave it blank to get the name automatically.")
+        
+    def getInput(self):
+        if self.ShowModal() == wx.ID_OK:
+            self.Destroy()
+            return [True, self.GetValue()]
+        else:
+            self.Destroy()
+            return False
 
 class FileDropTarget(wx.FileDropTarget):
     def __init__(self, obj):
@@ -103,17 +105,23 @@ class MainDialog(wx.Dialog):
         
         self.SetSizer(self.hbox)
         
+        wx.MessageBox('Download completed', 'Info', wx.OK | wx.ICON_INFORMATION)
+
     def bindEvent(self):
         self.Bind(wx.EVT_BUTTON, self.onClose, id=0)
         self.Bind(wx.EVT_BUTTON, self.onLazy, id=1)
         self.Bind(wx.EVT_BUTTON, self.onDownload, id=2)
+        
+        self.controlPanel.Bind(wx.EVT_LEFT_DCLICK, self.onControlPanelDoubleClick, self.controlPanel)
+        self.buttonPanel.Bind(wx.EVT_LEFT_DCLICK, self.onControlPanelDoubleClick, self.buttonPanel)
+        
+        self.textPanel.Bind(wx.EVT_LEFT_DCLICK, self.onTextPanelDoubleClick, self.textPanel)
+        self.text.Bind(wx.EVT_LEFT_DCLICK, self.onTextPanelDoubleClick, self.text)
+        
         self.plugins.Bind(wx.EVT_LIST_ITEM_SELECTED, self.onPluginSelected, self.plugins)
         self.versions.Bind(wx.EVT_LIST_ITEM_SELECTED, self.onVersionSelected, self.versions)
         self.versions.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.onVersionDoubleClick, self.versions)
-        
-        wx.MessageBox('Download completed', 'Info', wx.OK | wx.ICON_INFORMATION)
-        fileInputDialog = inputDialog()
-        
+
     def onClose(self, event):
         self.Close()
         
@@ -129,7 +137,7 @@ class MainDialog(wx.Dialog):
         result = self.updateVersionList(event.GetText())
         if isinstance(result, dict):
             if result["sim"] >= 0.8:
-                return self.changeText("Plugin info downloaded from BukkitDev! \n(Similarity: {0})".format(round(result["sim"], 2)))
+                return self.changeText("Plugin info downloaded from BukkitDev! \n(Similarity: {0})".format(round(result["sim"], 3)))
             else:
                 return self.warn("Warning: The BukkitDev plugin name\nis kind of different! Use with caution.\n(bukkitDevName: {0})\n(Similarity: {1})".format(result["bukkitDevName"], round(result["sim"], 3)))
         return False
@@ -139,6 +147,32 @@ class MainDialog(wx.Dialog):
         
     def onVersionSelected(self, event):
         return self.changeText("Double click to open plugin update log,\nor click download button to \ndownload the plugin and save to disk.")
+        
+    def onControlPanelDoubleClick(self, event): #Add files/folders
+        openFileDialog = wx.FileDialog(self, "Open Jar files", "", "", "Jar files (*.jar)|*.jar", wx.FD_OPEN | wx.FD_FILE_MUST_EXIST | wx.FD_MULTIPLE)
+        if openFileDialog.ShowModal() == wx.ID_OK:
+            return self.addPluginFiles(openFileDialog.GetPaths())
+        else:
+            return False
+        
+    def onTextPanelDoubleClick(self, event): 
+        focus = self.plugins.GetFocusedItem()
+        if plugins and focus != -1:
+            hash = self.plugins.GetItemText(focus)
+            textEntry = textEntryDialog(self)
+            oldName = self.getBukkitDevName(hash)
+            textEntry.SetValue(oldName)
+            result = textEntry.getInput() #[True, "abccba"], [True, ""], False
+            if not result or result[1] == oldName:
+                return self.changeText("Plugin's BukkitDev name is not changed.")
+            elif result[1] == "":
+                if self.deleteRow(hash):
+                    return self.warn("I will ask Google again for it's BukkitDev name.")
+            else:
+                if self.updateRow(result[1], hash):
+                    return self.changeText("Successfully changed plugin's\nBukkitDev name!")
+        else:
+            return self.onControlPanelDoubleClick(event)
         
     def changeText(self, text):
         self.text.SetForegroundColour((0,0,0))
@@ -195,6 +229,28 @@ class MainDialog(wx.Dialog):
                 except Exception as e:
                     return self.warn(str(e))
         raise Error("WTF?")
+        
+    def updateRow(self, bukkitDevName, hash):
+        for plugin in plugins:
+            if hash == plugin.hash:
+                if plugin.database.updateRow(plugin.packageName, bukkitDevName):
+                    return self.reload(plugin)
+                
+    def deleteRow(self, hash):
+        for plugin in plugins:
+            if hash == plugin.hash:
+                if plugin.database.deleteRow(plugin.packageName):
+                    return self.reload(plugin)
+                
+    def getBukkitDevName(self, hash):
+        for plugin in plugins:
+            if hash == plugin.hash:
+                return plugin.bukkitDevName
+                
+    def reload(self, plugin):
+        path = plugin.path
+        plugins.remove(plugin)
+        return self.addPluginFiles([path])
 
 class Main(wx.App):
     def OnInit(self):

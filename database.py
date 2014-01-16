@@ -60,6 +60,17 @@ class database(object):
         except sqlite3.OperationalError:
             if self.areTablesExist():
                 return self.updateRow(packageName, bukkitDevName)
+                
+    def deleteRow(self, packageName):
+        try:
+            cur = self.conn.cursor()
+            data = (packageName,)
+            cur.execute("DELETE FROM convert_table WHERE package_name=?", data)
+            self.conn.commit()
+            return True
+        except sqlite3.OperationalError:
+            if self.areTablesExist():
+                return self.deleteRow(packageName)
             
 if __name__ == "__main__": #Test
     database = database()
