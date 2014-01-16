@@ -79,7 +79,7 @@ class MainDialog(wx.Dialog):
         self.controlPanel = wx.Panel(self, -1)
         
         self.textPanel = wx.Panel(self.controlPanel, -1)
-        self.text = wx.StaticText(self.textPanel, -1, 'Drag and drop the plugins folder or *.jar here.')
+        self.text = wx.StaticText(self.textPanel, -1, 'Drag and drop the plugins folder or *.jar here.\nBukkit plugin updater v0.0.1\nAuthor: Saren')
         self.textBox.Add(self.text, 0, wx.EXPAND, 5)
         self.textPanel.SetSizer(self.textBox)
         
@@ -124,13 +124,15 @@ class MainDialog(wx.Dialog):
         return self.changeText("You want to download something, huh?")
         
     def onPluginSelected(self, event):
-        self.changeText("Loading...")
+        self.changeText("Loading...Please wait...")
         self.versions.DeleteAllItems()
-        sim = self.updateVersionList(event.GetText())
-        if sim >= 0.8:
-            return self.changeText("Plugin info downloaded from BukkitDev! \n(Similarity: {0})".format(round(sim, 2)))
-        else:
-            return self.warn("Warning: The BukkitDev plugin name\nis kind of different! Use with caution.\n(bukkitDevName: {0})\n(Similarity: {1})".format(plugin.bukkitDevName, round(sim, 3)))
+        result = self.updateVersionList(event.GetText())
+        if isinstance(result, dict):
+            if result["sim"] >= 0.8:
+                return self.changeText("Plugin info downloaded from BukkitDev! \n(Similarity: {0})".format(round(result["sim"], 2)))
+            else:
+                return self.warn("Warning: The BukkitDev plugin name\nis kind of different! Use with caution.\n(bukkitDevName: {0})\n(Similarity: {1})".format(result["bukkitDevName"], round(result["sim"], 3)))
+        return False
         
     def onVersionDoubleClick(self, event):
         return webbrowser.open(event.GetText())
@@ -189,14 +191,14 @@ class MainDialog(wx.Dialog):
                             self.versions.SetItem(index, 5, "None")
                         self.versions.SetItem(index, 6, row["Filename"])
                         self.versions.SetItem(index, 7, str(row["Downloads"]))
-                    return ratio(plugin.name.lower(), plugin.bukkitDevName.lower())
+                    return {"sim": ratio(plugin.name.lower(), plugin.bukkitDevName.lower()), "bukkitDevName": plugin.bukkitDevName}
                 except Exception as e:
                     return self.warn(str(e))
         raise Error("WTF?")
 
 class Main(wx.App):
     def OnInit(self):
-        dia = MainDialog(None, -1, 'Bukkit plugin updater')
+        dia = MainDialog(None, -1, 'Bukkit plugin updater v0.0.1')
         dia.ShowModal()
         dia.Destroy()
         return True
