@@ -93,8 +93,6 @@ class MainDialog(wx.Dialog):
         self.hbox.Add(self.versionsBox, 2, wx.EXPAND)
         
         self.SetSizer(self.hbox)
-        
-        wx.MessageBox('Download completed', 'Info', wx.OK | wx.ICON_INFORMATION)
 
     def bindEvent(self):
         self.Bind(wx.EVT_BUTTON, self.onClose, id=0)
@@ -115,8 +113,27 @@ class MainDialog(wx.Dialog):
         self.Close()
         
     def onLazy(self, event):
-        return self.changeText("You are lazy, huh?")
-        
+        answer = wx.MessageBox("Are you feeling lazy today?", "Let me ask you a question:", wx.YES_NO)
+        if answer == wx.YES:
+            itemsCount = self.plugins.GetItemCount()
+            process = wx.ProgressDialog("The whole world is getting even more lazier...", "Initializing...", maximum=itemsCount*1000, parent=None, style=wx.PD_AUTO_HIDE|wx.PD_APP_MODAL)
+            newVal = 0
+            for i in range(itemsCount):
+                process.Update(newVal, "Getting versions info of {0}...".format(self.plugins.GetItemText(i, 1)))
+                self.plugins.Select(i)
+                self.plugins.Focus(i)
+                self.versions.Select(0)
+                self.versions.Focus(0)
+                newVal += 500
+                process.Update(newVal, "Downloading latest version of {0}...".format(self.plugins.GetItemText(i, 1)))
+                self.onDownload(None)
+                newVal += 500
+            process.Close()
+            wx.MessageBox('All plugins are all downloaded.', 'Info', wx.OK | wx.ICON_INFORMATION)
+            return self.changeText("You are lazy today, huh?")
+        else:
+            return self.changeText("Oh, you are not feeling lazy today?")
+
     def onDownload(self, event):
         whichPlugin = self.plugins.GetFocusedItem()
         whichVersion = self.versions.GetFocusedItem()
