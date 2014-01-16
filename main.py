@@ -138,7 +138,7 @@ class MainDialog(wx.Dialog):
         if sim >= 0.8:
             return self.changeText("Plugin info downloaded from BukkitDev! \n(Similarity: {0})".format(round(sim, 2)))
         else:
-            return self.warn("Warning: The BukkitDev plugin name \nis kind of different! (Similarity: {0})\nUse with very caution.".format(round(sim, 2)))
+            return self.warn("Warning: The BukkitDev plugin name\nis kind of different! Use with caution.\n(bukkitDevName: {0})\n(Similarity: {1})".format(plugin.bukkitDevName, round(sim, 3)))
         
     def onVersionDoubleClick(self, event):
         return webbrowser.open(event.GetText())
