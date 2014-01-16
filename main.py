@@ -2,7 +2,6 @@
 from bukkit_plugin import *
 from error import Error
 from Levenshtein import ratio
-from multiprocessing import Pool
 from time import time
 from textwrap import fill
 import os
