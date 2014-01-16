@@ -40,27 +40,7 @@ class FileDropTarget(wx.FileDropTarget):
         self.obj = obj
 
     def OnDropFiles(self, x, y, filenames):
-        print(filenames)
-        for filename in filenames:
-            try:
-                newPlugin = bukkitPlugin(filename)
-                print(newPlugin)
-                for plugin in plugins:
-                    if newPlugin.hash == plugin.hash:
-                        raise Error("{0} already exists in plugin list.".format(newPlugin.name))
-                plugins.append(newPlugin)
-            except Exception as e:
-                self.obj.warn(str(e))
-        return self.updatePluginList()
-        
-    def updatePluginList(self):
-        self.obj.plugins.DeleteAllItems()
-        for plugin in plugins:
-            num_items = self.obj.plugins.GetItemCount()
-            self.obj.plugins.InsertItem(num_items, plugin.hash)
-            self.obj.plugins.SetItem(num_items, 1, plugin.name)
-            self.obj.plugins.SetItem(num_items, 2, plugin.version)
-        return True
+        return self.obj.addPluginFiles(filenames)
 
 class MainDialog(wx.Dialog):
     def __init__(self, parent, id, title):
@@ -188,6 +168,28 @@ class MainDialog(wx.Dialog):
         self.text.SetLabel(text)
         return True
 
+    def addPluginFiles(self, filenames):
+        for filename in filenames:
+            try:
+                newPlugin = bukkitPlugin(filename)
+                print(newPlugin)
+                for plugin in plugins:
+                    if newPlugin.hash == plugin.hash:
+                        raise Error("{0} already exists in plugin list.".format(newPlugin.name))
+                plugins.append(newPlugin)
+            except Exception as e:
+                self.warn(str(e))
+        return self.updatePluginList()
+        
+    def updatePluginList(self):
+        self.plugins.DeleteAllItems()
+        for plugin in plugins:
+            num_items = self.plugins.GetItemCount()
+            self.plugins.InsertItem(num_items, plugin.hash)
+            self.plugins.SetItem(num_items, 1, plugin.name)
+            self.plugins.SetItem(num_items, 2, plugin.version)
+        return True
+        
 class Main(wx.App):
     def OnInit(self):
         dia = MainDialog(None, -1, 'Bukkit plugin updater')
