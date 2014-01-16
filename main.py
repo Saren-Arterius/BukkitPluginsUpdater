@@ -349,6 +349,9 @@ if __name__ == "__main__":
     db = os.path.abspath(os.path.dirname(argv[0])) + "\\" + "database.db"
     if not os.path.exists(db): #Analytic
         url = "https://minecraft.wtako.coms.hk/analytic/{0}/".format("0.0.1") #Version
-        req = urllib.request.urlopen(url, timeout=1)
+        try:
+            req = urllib.request.urlopen(url, timeout=1)
+        except:
+            pass
     app = Main()
     app.MainLoop()
