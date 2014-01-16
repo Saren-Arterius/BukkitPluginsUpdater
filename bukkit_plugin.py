@@ -1,11 +1,13 @@
 #!/usr/bin/python3.3
 from sys import argv
 from zipfile import ZipFile, is_zipfile
-from re import findall, sub
+from re import findall, sub, split
 from pyquery import PyQuery as pq
 from error import Error
 from hashlib import sha256
-from os.path import dirname
+from os.path import dirname, realpath
+import http.cookiejar
+import webbrowser
 import urllib.request
 
 class bukkitPlugin(ZipFile):
@@ -27,30 +29,48 @@ class bukkitPlugin(ZipFile):
 
     def __getGoogleResult(self):
         try:
-            url = "http://www.google.com.hk/search?q=\"{0}\"+\"{1}\"+files+site%3Adev.bukkit.org%2Fbukkit-plugins".format(sub(" ", "+", self.name), sub(" ", "+", self.author))
+            url = "http://www.google.com.hk/search?q=\"{0}\"+files+site%3Adev.bukkit.org%2Fbukkit-plugins".format(sub(" ", "+", self.name))
+            cookieFile = dirname(realpath(__file__)) + "\\" + "cookie.txt"
+            cj = http.cookiejar.LWPCookieJar(cookieFile)
+            opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
             opener = urllib.request.build_opener()
             opener.addheaders = [('User-agent', 'Mozilla/5.0')]
             resp = opener.open(url)
             return resp.read().decode()
-        except:
-            raise Error("Failed to use google!")
-        
+        except Exception as e:
+            try:
+                print("Failed to use google!\nProbably you used too much!\n{0}\nAttemping human captcha...".format(str(e)))
+                errorPage = e.read().decode()
+                imageUrl = "https://ipv4.google.com/sorry/" + pq(errorPage)("img").attr("src")
+                id = pq(errorPage)("input[name='id']")
+                gContinue = url
+                webbrowser.open(imageUrl)
+                captcha = input("Please type captcha here: ")
+                opener = urllib.request.build_opener()
+                opener.addheaders = [('User-agent', 'Mozilla/5.0')]
+                payload = [urllib.parse.quote_plus(url), urllib.parse.quote_plus(id), urllib.parse.quote_plus(captcha), urllib.parse.quote_plus("Submit")]
+                sorryReqUrl = "https://ipv4.google.com/sorry/CaptchaRedirect?continue={0}&id={1}&captcha={2}&submit={3}".format(payload)
+                resp = opener.open(sorryReqUrl)
+                return resp.read().decode()
+            except Exception as e:
+                raise Error("Failed to use google!\nProbably you used too much!\n{0}".format(str(e)))
+
     def __getFilesPage(self):
         try:
             self.googleResult
         except:
             self.googleResult = self.__getGoogleResult()
-        finally:
-            for elem in pq(self.googleResult)(".kv").find("cite"):
-                bukkitDevName = findall("dev.bukkit.org/bukkit-plugins/(.+)/.+", sub("<[^>]*>", "", pq(elem).html()))
-                if bukkitDevName:
-                    url = "http://dev.bukkit.org/bukkit-plugins/{0}/files/".format(bukkitDevName[0])
-                    print(bukkitDevName)
-                    opener = urllib.request.build_opener()
-                    opener.addheaders = [('User-agent', 'Mozilla/5.0')]
-                    resp = opener.open(url)
-                    return resp.read().decode()
-            raise Error("Failed to get bukkit files page, \nor plugin is not available on bukkitdev.")
+        for elem in pq(self.googleResult)(".r").find("a"):
+            bukkitDevName = findall("dev.bukkit.org/bukkit-plugins/(.+)/", pq(elem).attr("href"))
+            bukkitDevName = str(split("/", bukkitDevName[0])[0])
+            if bukkitDevName:
+                url = "http://dev.bukkit.org/bukkit-plugins/{0}/files/".format(bukkitDevName)
+                self.bukkitDevName = bukkitDevName
+                opener = urllib.request.build_opener()
+                opener.addheaders = [('User-agent', 'Mozilla/5.0')]
+                resp = opener.open(url)
+                return resp.read().decode()
+        raise Error("Failed to get bukkit files page, \nor plugin is not available on bukkitdev.")
         
     def getAllVersions(self):
         try:

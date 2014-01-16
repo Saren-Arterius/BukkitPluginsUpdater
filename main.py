@@ -1,6 +1,7 @@
 #!/usr/bin/python
 from bukkit_plugin import *
 from error import Error
+from Levenshtein import ratio
 import datetime
 import wx
 import webbrowser
@@ -23,7 +24,7 @@ class FileDropTarget(wx.FileDropTarget):
                         raise Error("{0} already exists in plugin list.".format(newPlugin.name))
                 plugins.append(newPlugin)
             except Exception as e:
-                self.obj.changeText(str(e))
+                self.obj.warn(str(e))
         return self.updatePluginList()
         
     def updatePluginList(self):
@@ -50,7 +51,7 @@ class MainDialog(wx.Dialog):
         self.plugins.InsertColumn(2, 'Version')
         
         self.plugins.SetColumnWidth(0, 0)
-        self.plugins.SetColumnWidth(1, 200)
+        self.plugins.SetColumnWidth(1, 180)
         self.plugins.SetColumnWidth(2, 90)
 
         self.versions.InsertColumn(0, 'href') #Hidden column
@@ -131,9 +132,13 @@ class MainDialog(wx.Dialog):
                             self.versions.SetItem(index, 5, "None")
                         self.versions.SetItem(index, 6, row["Filename"])
                         self.versions.SetItem(index, 7, str(row["Downloads"]))
+                        sim = ratio(plugin.name.lower(), plugin.bukkitDevName.lower())
                 except Exception as e:
-                    return self.changeText(str(e))
-        return self.changeText("Plugin info downloaded from BukkitDev!")
+                    return self.warn(str(e))
+        if sim >= 0.8:
+            return self.changeText("Plugin info downloaded from BukkitDev! \n(Similarity: {0})".format(round(sim, 2)))
+        else:
+            return self.warn("Warning: The BukkitDev plugin name \nis kind of different! (Similarity: {0})\nUse with very caution.".format(round(sim, 2)))
         
     def onVersionDoubleClick(self, event):
         return webbrowser.open(event.GetText())
@@ -142,6 +147,12 @@ class MainDialog(wx.Dialog):
         return self.changeText("Double click to open plugin update log,\nor click download button to \ndownload the plugin and save to disk.")
         
     def changeText(self, text):
+        self.text.SetForegroundColour((0,0,0))
+        self.text.SetLabel(text)
+        return True
+        
+    def warn(self, text):
+        self.text.SetForegroundColour((255,0,0))
         self.text.SetLabel(text)
         return True
 
