@@ -105,7 +105,7 @@ class MainDialog(wx.Dialog):
         self.textPanel.Bind(wx.EVT_LEFT_DCLICK, self.onTextPanelDoubleClick, self.textPanel)
         self.text.Bind(wx.EVT_LEFT_DCLICK, self.onTextPanelDoubleClick, self.text)
         
-        self.plugins.Bind(wx.EVT_LIST_ITEM_SELECTED, self.onPluginSelected, self.plugins)
+        self.plugins.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.onPluginSelected, self.plugins)
         self.versions.Bind(wx.EVT_LIST_ITEM_SELECTED, self.onVersionSelected, self.versions)
         self.versions.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.onVersionDoubleClick, self.versions)
         self.Bind(wx.EVT_CHAR_HOOK, self.onDeleteKey)
@@ -318,6 +318,20 @@ class MainDialog(wx.Dialog):
                     return self.changeText("Successfully changed plugin's BukkitDev name!")
         else:
             return self.onControlPanelDoubleClick(event)
+            
+    def onDeleteKey(self, event):
+        key = event.GetKeyCode()
+        if key == 127 or key == 385: # Delete key
+            itemsCount = self.plugins.GetItemCount()
+            for i in range(itemsCount):
+                if self.plugins.IsSelected(i):
+                    for plugin in plugins:
+                        if plugin.hash == self.plugins.GetItemText(i):
+                            plugins.remove(plugin)
+                            break
+            return self.updatePluginList()
+        else:
+            return False
             
 class Main(wx.App):
     def OnInit(self):
