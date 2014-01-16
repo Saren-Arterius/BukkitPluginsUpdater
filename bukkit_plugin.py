@@ -132,11 +132,18 @@ class bukkitPlugin(ZipFile):
             resp = opener.open(downloadPageUrl)
             downloadPage = resp.read().decode()
             versionHash = findall("([a-f\d]{32})", downloadPage)[0]
-            if versionHash == self.fileHash:
-                raise Error("You already own that file!")
-            return [versionHash, pq(downloadPage)(".user-action-download").find("a").attr("href")]
+            if not self.areHashesMatch(versionHash, downloadPageUrl):
+                self.database.setVersionHash(versionHash, downloadPageUrl)
+            return pq(downloadPage)(".user-action-download").find("a").attr("href")
         except KeyError:
             raise Error("Bukkit page is broken?")
+            
+    def areHashesMatch(self, hash, href):
+        cmpHash = self.database.getVersionHash(href)
+        if cmpHash == hash:
+            return True
+        else:
+            return False
 
 if __name__ == "__main__": #Test
     plugin = bukkitPlugin(argv[1])

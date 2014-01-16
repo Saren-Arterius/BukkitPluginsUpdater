@@ -246,30 +246,37 @@ class MainDialog(wx.Dialog):
                 hash = self.plugins.GetItemText(whichPlugin)
                 for plugin in plugins:
                     if hash == plugin.hash:
-                        result = plugin.getVersionUrl(whichVersion) # result = [md5, url]
-                        break
-                return self.saveToDisk(plugin, result[1], whichVersion, result[0])
+                        return self.saveToDisk(plugin, plugin.getVersionUrl(whichVersion), whichVersion)
+                raise Error("WTF?")
             except Exception as e:
                 return self.warn(str(e))
         else:
             return self.changeText("You want to download something, huh?")
             
-    def saveToDisk(self, plugin, url, whichVersion, hash):
+    def saveToDisk(self, plugin, downUrl, whichVersion):
         try:
+            cmpUrl = plugin.versions[whichVersion]["Name"]["href"]
+
             self.changeText("Start downloading plugin...")
             saveDir = plugin.origin + "\\__plugindownloads__\\" + datetime.datetime.fromtimestamp(time()).strftime('%Y-%m-%d')
             saveFileName = plugin.versions[whichVersion]["Filename"]
             savePath = saveDir + "\\" + saveFileName
-            if not os.path.exists(saveDir):
+            
+            if plugin.areHashesMatch(plugin.fileHash, cmpUrl):
+                raise Error("You already own that file: {0}".format(savePath))
+            elif os.path.exists(savePath):
+                existingPlugin = bukkitPlugin(savePath)
+                if existingPlugin.areHashesMatch(existingPlugin.fileHash, cmpUrl):
+                    raise Error("You already own that file: {0}".format(savePath))
+            elif not os.path.exists(saveDir):
                 print("Making directory: {0}".format(saveDir))
                 os.makedirs(saveDir)
-            if os.path.exists(savePath):
-                existingPlugin = bukkitPlugin(savePath)
-                if existingPlugin.fileHash == hash:
-                    raise Error("You already own that file: {0}".format(savePath))
-            urllib.request.urlretrieve(url, savePath)
+                    
+            urllib.request.urlretrieve(downUrl, savePath)
+            
             downloadedPlugin = bukkitPlugin(savePath)
-            if downloadedPlugin.fileHash == hash:
+            print(downloadedPlugin)
+            if downloadedPlugin.areHashesMatch(downloadedPlugin.fileHash, cmpUrl):
                 return self.changeText("Download success! File is saved at: {0}".format(savePath))
             else:
                 raise Error("Downloaded file does not match hash!")

@@ -10,6 +10,7 @@ class database(object):
     def createTables(self):
         try:
             cur = self.conn.cursor()
+            cur.execute("CREATE TABLE `version_hash` (`href` TEXT NULL, `hash` TEXT NULL, PRIMARY KEY (`href`) )")
             cur.execute("CREATE TABLE `convert_table` (`package_name` TEXT NULL, `bukkitdev_name` TEXT NULL, PRIMARY KEY (`package_name`) )")
             cur.close()
             return True
@@ -71,7 +72,32 @@ class database(object):
         except sqlite3.OperationalError:
             if self.areTablesExist():
                 return self.deleteRow(packageName)
-            
+
+    def getVersionHash(self, href):
+        try:
+            cur = self.conn.cursor()
+            data = (href,)
+            sql = cur.execute("SELECT hash FROM version_hash WHERE href=?", data)
+            self.conn.commit()
+            for row in sql:
+                cur.close()
+                return row[0]
+            return False
+        except sqlite3.OperationalError:
+            if self.areTablesExist():
+                return self.getVersionHash(href)
+                
+    def setVersionHash(self, hash, href):
+        try:
+            cur = self.conn.cursor()
+            data = (href, hash,)
+            cur.execute("INSERT INTO version_hash VALUES (?,?)", data)
+            self.conn.commit()
+            return True
+        except sqlite3.OperationalError:
+            if self.areTablesExist():
+                return self.setVersionHash(hash, href)
+
 if __name__ == "__main__": #Test
     database = database()
     database.newRow("test.package", "goodName")
