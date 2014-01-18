@@ -1,10 +1,11 @@
 #!/usr/bin/python3.3
-from os.path import dirname, realpath
+from sys import argv
+import os
 import sqlite3
 
 class database(object):
     def __init__(self):
-        self.dbFile = dirname(realpath(__file__)) + "\\" + "database.db"
+        self.dbFile = os.path.abspath(os.path.dirname(argv[0])) + "\\" + "database.db"
         self.conn = sqlite3.connect(self.dbFile)
         
     def createTables(self):
