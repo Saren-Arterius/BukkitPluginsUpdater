@@ -348,7 +348,7 @@ class Main(wx.App):
 if __name__ == "__main__":
     db = os.path.abspath(os.path.dirname(argv[0])) + "\\" + "database.db"
     if not os.path.exists(db): #Analytic
-        url = "https://minecraft.wtako.coms.hk/analytic/{0}/".format("0.0.1") #Version
+        url = "https://minecraft.wtako.net/analytic/{0}/".format("0.0.1") #Version
         try:
             req = urllib.request.urlopen(url, timeout=1)
         except:
